@@ -1,21 +1,32 @@
 const jwt = require("jsonwebtoken");
+const { promisify } = require("util");
 
 const config = process.env;
 
-const verifyToken = (req, res, next) => {
-  const token =
-    req.body.token || req.query.token || req.headers["x-access-token"];
+module.exports = {
+    eAdmin: async function (req, res, next){
+      const authHeader = req.headers.authorization;
+      if(!authHeader){
+        return res.status(401).json({
+          message: 'Token is required.'
+        });
+      }
+      const [, token] = authHeader.split(' ');
 
-  if (!token) {
-    return res.status(403).send("A token is required for authentication");
-  }
-  try {
-    const decoded = jwt.verify(token, config.TOKEN_KEY);
-    req.user = decoded;
-  } catch (err) {
-    return res.status(401).send("Invalid Token");
-  }
-  return next();
-};
+      if (!token) {
+        res.status(401).json({
+          message: 'Token não encontrado',
+        })
+      }
 
-module.exports = verifyToken;
+      try {
+        const decode = await promisify(jwt.verify)(token, '0JwcqGwX0uBVAfbUqRLpE2gefr6hSw7tOnNdLrr9o3Tt2wKfLU')
+        req.userId = decode.idUserexist
+        return next();
+      } catch (error) {
+        res.status(401).json({
+          message: 'Token expirado ou inválido',
+        })
+      }
+    }
+}
