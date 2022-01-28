@@ -5,7 +5,27 @@ const jwt = require("jsonwebtoken");
 
 module.exports = {
   async login(req, res) {
-    const { displayname, email, password } = req.body;
+
+    const { email,password } = req.body;
+
+    const userExist = await User.findOne({
+      attributes: ['id','email','password'], 
+      where: {
+        email: req.body.email
+      }
+    });
+
+    if(userExist === null){
+      return res.status(400).json({
+        message: 'Incorrect username or password.'
+      })
+    }
+
+    if(!email && !password){
+      return res.status(400).json({
+        message: `"\email\" and "\password\" is required.`
+      })
+    }
 
     if (!email) {
       return res.status(400).json({ message: `"\email\" is required!` });
@@ -31,7 +51,8 @@ module.exports = {
         .json({ message: `"\email\" must be a valid email" ` });
     }
 
-    const displayName = req.body.displayname;
+    const { displayname } = req.body;
+
     const user = { name: displayname };
 
     const accessToken = jwt.sign(user, " " + process.env.ACCES_TOKEN_SECRET);
