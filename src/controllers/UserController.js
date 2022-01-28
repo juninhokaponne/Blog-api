@@ -2,11 +2,9 @@ const { response } = require("express");
 const Posts = require("../models/Posts");
 const User = require("../models/Users");
 const Isemail = require("isemail");
-const jwt = require("jsonwebtoken");
 const Sequelize = require("sequelize");
 const QueryTypes = require("sequelize");
 const bcrypt = require("bcrypt");
-const { post, use } = require("../routes");
 
 module.exports = {
   async createUser(req, res) {
@@ -131,15 +129,37 @@ module.exports = {
   },
 
   async listPosts(req, res) {
-    const listPostUsers = await Posts.findAll({
-      attributes: ["id", "createdAt", "updatedAt", "title", "content"],
+
+    const sequelize = new Sequelize("mydatabase", "root", "", {
+      host: "localhost",
+      dialect: "mysql",
+
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
     });
 
-    return res.status(200).json(listPostUsers);
+    User.sequelize
+      .query(`SELECT p.id,p.createdAt AS published,p.updatedAt,p.title,p.content, us.id,us.displayname,us.email,us.image FROM posts p 
+      INNER JOIN users us ON us.id = p.userId`, {
+        type: QueryTypes.SELECT,
+      })
+      .then((results) => {
+          return res.status(200).json(results[0])
+      });
+
   },
 
   async listPostById(req, res) {
     const test = await Posts.findOne({
+      include: [{
+        model: User,
+        required: true,
+        attributes: ['id','displayname','email','image','createdAt','updatedAt']
+      }],
       where: {
         id: req.params.id,
       },
