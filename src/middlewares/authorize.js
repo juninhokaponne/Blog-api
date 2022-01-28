@@ -1,4 +1,4 @@
-const jwt = require("express-jwt");
+
 const { secret } = require("config.json");
 const sequelize = require("../database");
 const User = require("../models/Users");
