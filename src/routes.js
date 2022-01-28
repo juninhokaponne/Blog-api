@@ -26,6 +26,9 @@ routes.get('/posts',Auth.eAdmin, UserController.listPosts)
 // List post by ID
 routes.get('/posts/:id',Auth.eAdmin, UserController.listPostById)
 
+// Update post
+routes.put('/posts/:id',Auth.eAdmin, UserController.updatePost)
+
 //Delete me 
 routes.delete('/users/me/:id',Auth.eAdmin, UserController.deleteMe)
 

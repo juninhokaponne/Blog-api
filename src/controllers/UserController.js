@@ -130,6 +130,62 @@ module.exports = {
 
   async listPosts(req, res) {
 
+    const myListPosts = await Posts.findAll({
+      attributes: ['id','title','content','createdAt','updatedAt'], 
+      include: [{
+        model: User,
+        required: true,
+        attributes: ['id','displayname','email','image']
+      }]
+    })
+
+    res.status(200).json(myListPosts)
+
+  },
+
+  async listPostById(req, res) {
+    const { id } = req.params;
+
+    const verifyPostExist = await Posts.findOne({
+      attributes:['id'],
+      where: {
+        id: id 
+      }
+    })
+
+    // Verify if exist post by id
+    if(verifyPostExist == null || typeof verifyPostExist == null){
+      return res.status(401).json({ message: 'Post não existe'})
+    }
+    
+
+    const listPostByid = await Posts.findOne({
+      attributes: ['id','title','content','createdAt','updatedAt'],
+      include: [{
+        model: User,
+        required: true,
+        attributes: ['id','displayname','email','image']
+      }],
+      where: {
+        id: req.params.id,
+      },
+    });
+    res.status(200).json(listPostByid);
+  },
+
+  async updatePost(req,res){
+
+    const { id } = req.params;
+    const { title, content} = req.body;
+
+    if (!title){
+      return res.status(200).json({ message: `"\title\" is required!`});
+    }
+    
+    if(!content){
+      return res.status(200).json({ message: `"\content\" is required!`});
+    }
+    
     const sequelize = new Sequelize("mydatabase", "root", "", {
       host: "localhost",
       dialect: "mysql",
@@ -142,29 +198,21 @@ module.exports = {
       },
     });
 
+
+
     User.sequelize
-      .query(`SELECT p.id,p.createdAt AS published,p.updatedAt,p.title,p.content, us.id,us.displayname,us.email,us.image FROM posts p 
-      INNER JOIN users us ON us.id = p.userId`, {
+      .query(`UPDATE posts SET title = ? , content = ? where id = ? `, {
+        replacements: [title, content ,id],
         type: QueryTypes.SELECT,
       })
       .then((results) => {
-          return res.status(200).json(results[0])
+        res.status(200).json({
+          title,
+          content,
+          userId: id
+        })
       });
 
-  },
-
-  async listPostById(req, res) {
-    const test = await Posts.findOne({
-      include: [{
-        model: User,
-        required: true,
-        attributes: ['id','displayname','email','image','createdAt','updatedAt']
-      }],
-      where: {
-        id: req.params.id,
-      },
-    });
-    res.status(200).json(test);
   },
 
   async deleteMe(req, res) {
