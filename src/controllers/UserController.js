@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 const Sequelize = require("sequelize");
 const QueryTypes = require("sequelize");
 const bcrypt = require("bcrypt");
-const { eAdmin } = require('../middlewares/Auth');
+const { post, use } = require("../routes");
 
 module.exports = {
   async createUser(req, res) {
@@ -41,9 +41,9 @@ module.exports = {
     }
 
     if (password.length <= 5) {
-      return res
-        .status(400)
-        .json({ message: `"\password\" length must be 6 characters long` });
+      return res.status(400).json({
+        message: `"\password\" length must be 6 characters long`,
+      });
     }
 
     const sequelize = new Sequelize("mydatabase", "root", "", {
@@ -57,7 +57,6 @@ module.exports = {
         idle: 10000,
       },
     });
-
 
     User.sequelize
       .query(`SELECT email FROM users where email = ? `, {
@@ -76,7 +75,7 @@ module.exports = {
 
     await User.create(req.body)
       .then(() => {
-        return res.status(201).json({ message: 'Usuário criado !'});
+        return res.status(201).json({ message: "Usuário criado !" });
       })
       .catch((err) => {
         return res.status(400).json({
@@ -104,36 +103,63 @@ module.exports = {
   },
 
   async createPost(req, res) {
-    await Posts.create(req.body)
+    const { userId } = req;
+    const { title, content } = req.body;
+    if (!title || !content) {
+      return res
+        .status(400)
+        .json({ message: `"\Title\" and "\content\" is required.` });
+    }
+
+    await Posts.create({
+      title,
+      content,
+      userId,
+    })
       .then(() => {
         return res.status(201).json({
-          title: req.body.title,
-          content: req.body.content,
-          userId: req.body.userId,
+          title: title,
+          content: content,
+          userId: userId,
         });
       })
       .catch((err) => {
-        return res
-          .status(400)
-          .json({ message: "Houve um problema ao tentar criar um post!" });
+        return res.status(401).json({
+          message: err,
+        });
       });
   },
 
-  async deleteMe(req, res){
+  async listPosts(req, res) {
+    const listPostUsers = await Posts.findAll({
+      attributes: ["id", "createdAt", "updatedAt", "title", "content"],
+    });
 
+    return res.status(200).json(listPostUsers);
+  },
+
+  async listPostById(req, res) {
+    const test = await Posts.findOne({
+      where: {
+        id: req.params.id,
+      },
+    });
+    res.status(200).json(test);
+  },
+
+  async deleteMe(req, res) {
     const { id } = req.params;
     const { userId } = req;
 
-    if(id == userId){
+    if (id == userId) {
       await User.destroy({
         where: {
-          id 
-        }
+          id,
+        },
       });
       res.status(200).json();
-    }else {
+    } else {
       res.status(400).json();
     }
-    
   },
 };
