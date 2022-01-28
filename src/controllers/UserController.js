@@ -3,6 +3,8 @@ const Posts = require("../models/Posts");
 const User = require("../models/Users");
 const Isemail = require("isemail");
 const jwt = require("jsonwebtoken");
+const Sequelize = require('sequelize');
+const QueryTypes = require('sequelize');
 
 module.exports = {
   async createUser(req, res) {
@@ -20,7 +22,7 @@ module.exports = {
     if (!Isemail.validate(email)) {
       return res
         .status(400)
-        .json({ message: `"\email\" must be a valid email" ` });
+        .json({ message: `"\email\" must be a valid email ` });
     }
 
     if (displayname.length <= 7) {
@@ -37,7 +39,36 @@ module.exports = {
         .json({ message: `"\password\" length must be 6 characters long` });
     }
 
-    await User.create(req.body)
+      const sequelize = new Sequelize('mydatabase', 'root', '', {
+        host: 'localhost',
+        dialect: 'mysql',
+      
+        pool: {
+          max: 5,
+          min: 0,
+          acquire: 30000,
+          idle: 10000
+        } 
+      });
+
+      
+    User.sequelize.query(`SELECT email FROM users where email = ? `,{
+        replacements: [email],
+        type: QueryTypes.SELECT
+    }).then(results => {
+
+      if (results[0][0] == null){ 
+        return 
+      }
+
+      if(results[0][0].email === email ){
+        return res.status(400).json({message: "User exist"})
+      }
+        
+    });
+   
+
+      await User.create(req.body)
       .then(() => {
         return res.status(201).json({ message: "Usuário criado com sucesso!" });
       })
@@ -50,21 +81,24 @@ module.exports = {
       });
   },
 
-  async listUsers(req, res) {
+   async listUsers(req, res) {
     const users = await User.findAll({
       attributes: ["id", "displayname", "email", "image"],
     });
-    res.header("Access-Control-Expose-Headers", "x-access-token");
     return res.status(200).json(users, null, 10);
   },
 
   async ListId(req, res) {
+    // id passado por params
     const { id } = req.params;
 
     const userslist = await User.findByPk(id, {
       attributes: ["id", "displayname", "email", "image"],
     });
-    res.status(200).json(userslist);
+
+      return res.status(200).json(userslist);
+    
+
   },
 
   async createPost(req, res) {
