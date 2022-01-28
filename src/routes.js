@@ -18,7 +18,13 @@ routes.get('/users',Auth.eAdmin, UserController.listUsers)
 routes.get('/users/:id',Auth.eAdmin, UserController.ListId)
 
 // Create post
-routes.post('/posts', UserController.createPost)
+routes.post('/posts',Auth.eAdmin, UserController.createPost)
+
+// List posts
+routes.get('/posts',Auth.eAdmin, UserController.listPosts)
+
+// List post by ID
+routes.get('/posts/:id',Auth.eAdmin, UserController.listPostById)
 
 //Delete me 
 routes.delete('/users/me/:id',Auth.eAdmin, UserController.deleteMe)
