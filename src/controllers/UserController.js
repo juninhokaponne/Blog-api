@@ -3,12 +3,21 @@ const Posts = require("../models/Posts");
 const User = require("../models/Users");
 const Isemail = require("isemail");
 const jwt = require("jsonwebtoken");
-const Sequelize = require('sequelize');
-const QueryTypes = require('sequelize');
+const Sequelize = require("sequelize");
+const QueryTypes = require("sequelize");
+const bcrypt = require("bcrypt");
+const { eAdmin } = require('../middlewares/Auth');
 
 module.exports = {
   async createUser(req, res) {
-    const { displayname, email, password } = req.body;
+    const { displayname, email } = req.body;
+    const password = await bcrypt.hash("123456", 8);
+
+    if (await bcrypt.compare(req.body.password, password)) {
+      return res.status(400).json({
+        message: "User or password is wrong!",
+      });
+    }
 
     if (!email) {
       return res.status(400).json({ message: `"\email\" is required!` });
@@ -26,11 +35,9 @@ module.exports = {
     }
 
     if (displayname.length <= 7) {
-      return res
-        .status(400)
-        .json({
-          message: `"\displayName\" length must be at least 8 characters long`,
-        });
+      return res.status(400).json({
+        message: `"\displayName\" length must be at least 8 characters long`,
+      });
     }
 
     if (password.length <= 5) {
@@ -39,49 +46,46 @@ module.exports = {
         .json({ message: `"\password\" length must be 6 characters long` });
     }
 
-      const sequelize = new Sequelize('mydatabase', 'root', '', {
-        host: 'localhost',
-        dialect: 'mysql',
-      
-        pool: {
-          max: 5,
-          min: 0,
-          acquire: 30000,
-          idle: 10000
-        } 
+    const sequelize = new Sequelize("mydatabase", "root", "", {
+      host: "localhost",
+      dialect: "mysql",
+
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+    });
+
+
+    User.sequelize
+      .query(`SELECT email FROM users where email = ? `, {
+        replacements: [email],
+        type: QueryTypes.SELECT,
+      })
+      .then((results) => {
+        if (results[0][0] == null) {
+          return;
+        }
+
+        if (results[0][0].email === email) {
+          return res.status(400).json({ message: "Usuário já existe" });
+        }
       });
 
-      
-    User.sequelize.query(`SELECT email FROM users where email = ? `,{
-        replacements: [email],
-        type: QueryTypes.SELECT
-    }).then(results => {
-
-      if (results[0][0] == null){ 
-        return 
-      }
-
-      if(results[0][0].email === email ){
-        return res.status(400).json({message: "User exist"})
-      }
-        
-    });
-   
-
-      await User.create(req.body)
+    await User.create(req.body)
       .then(() => {
-        return res.status(201).json({ message: "Usuário criado com sucesso!" });
+        return res.status(201).json({ message: 'Usuário criado !'});
       })
       .catch((err) => {
-        return res
-          .status(400)
-          .json({
-            message: "Houve um problema ao cadastrar, tente novamente!",
-          });
+        return res.status(400).json({
+          message: "Houve um problema ao cadastrar, tente novamente!",
+        });
       });
   },
 
-   async listUsers(req, res) {
+  async listUsers(req, res) {
     const users = await User.findAll({
       attributes: ["id", "displayname", "email", "image"],
     });
@@ -96,19 +100,17 @@ module.exports = {
       attributes: ["id", "displayname", "email", "image"],
     });
 
-      return res.status(200).json(userslist);
-    
-
+    return res.status(200).json(userslist);
   },
 
   async createPost(req, res) {
     await Posts.create(req.body)
       .then(() => {
-        return res.status(201).json({ 
-            title: req.body.title,
-            content: req.body.content,
-            userId: req.body.userId
-         });
+        return res.status(201).json({
+          title: req.body.title,
+          content: req.body.content,
+          userId: req.body.userId,
+        });
       })
       .catch((err) => {
         return res
@@ -117,10 +119,21 @@ module.exports = {
       });
   },
 
-  async deleteMe(req, res) {
-    const userslist = await User.delete(id, {
-      attributes: ["id", "displayname", "email", "image"],
-    });
-    res.status(200).json(userslist);
+  async deleteMe(req, res){
+
+    const { id } = req.params;
+    const { userId } = req;
+
+    if(id == userId){
+      await User.destroy({
+        where: {
+          id 
+        }
+      });
+      res.status(200).json();
+    }else {
+      res.status(400).json();
+    }
+    
   },
 };
