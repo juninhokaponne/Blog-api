@@ -89,8 +89,7 @@ module.exports = {
     return res.status(200).json(users, null, 10);
   },
 
-  async ListId(req, res) {
-    // id passado por params
+  async ListUsersId(req, res) {
     const { id } = req.params;
 
     const userslist = await User.findByPk(id, {
@@ -99,122 +98,7 @@ module.exports = {
 
     return res.status(200).json(userslist);
   },
-
-  async createPost(req, res) {
-    const { userId } = req;
-    const { title, content } = req.body;
-    if (!title || !content) {
-      return res
-        .status(400)
-        .json({ message: `"\Title\" and "\content\" is required.` });
-    }
-
-    await Posts.create({
-      title,
-      content,
-      userId,
-    })
-      .then(() => {
-        return res.status(201).json({
-          title: title,
-          content: content,
-          userId: userId,
-        });
-      })
-      .catch((err) => {
-        return res.status(401).json({
-          message: err,
-        });
-      });
-  },
-
-  async listPosts(req, res) {
-
-    const myListPosts = await Posts.findAll({
-      attributes: ['id','title','content','createdAt','updatedAt'], 
-      include: [{
-        model: User,
-        required: true,
-        attributes: ['id','displayname','email','image']
-      }]
-    })
-
-    res.status(200).json(myListPosts)
-
-  },
-
-  async listPostById(req, res) {
-    const { id } = req.params;
-
-    const verifyPostExist = await Posts.findOne({
-      attributes:['id'],
-      where: {
-        id: id 
-      }
-    })
-
-    // Verify if exist post by id
-    if(verifyPostExist == null || typeof verifyPostExist == null){
-      return res.status(401).json({ message: 'Post não existe'})
-    }
-    
-
-    const listPostByid = await Posts.findOne({
-      attributes: ['id','title','content','createdAt','updatedAt'],
-      include: [{
-        model: User,
-        required: true,
-        attributes: ['id','displayname','email','image']
-      }],
-      where: {
-        id: req.params.id,
-      },
-    });
-    res.status(200).json(listPostByid);
-  },
-
-  async updatePost(req,res){
-
-    const { id } = req.params;
-    const { title, content} = req.body;
-
-    if (!title){
-      return res.status(200).json({ message: `"\title\" is required!`});
-    }
-    
-    if(!content){
-      return res.status(200).json({ message: `"\content\" is required!`});
-    }
-    
-    const sequelize = new Sequelize("mydatabase", "root", "", {
-      host: "localhost",
-      dialect: "mysql",
-
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-    });
-
-
-
-    User.sequelize
-      .query(`UPDATE posts SET title = ? , content = ? where id = ? `, {
-        replacements: [title, content ,id],
-        type: QueryTypes.SELECT,
-      })
-      .then((results) => {
-        res.status(200).json({
-          title,
-          content,
-          userId: id
-        })
-      });
-
-  },
-
+  
   async deleteMe(req, res) {
     const { id } = req.params;
     const { userId } = req;
